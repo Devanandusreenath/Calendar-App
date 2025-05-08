@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   format, addMonths, subMonths, startOfMonth, endOfMonth,
-  eachDayOfInterval, isSameDay, isToday, parseISO, isSameMonth
+  eachDayOfInterval, isSameDay, isToday, parseISO, isSameMonth, setYear
 } from 'date-fns';
 import './App.css';
 
@@ -76,6 +76,8 @@ function App() {
 
   const goToPreviousMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const goToNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+  const goToToday = () => setCurrentDate(new Date());
+  const goToYear = (year) => setCurrentDate(setYear(currentDate, parseInt(year)));
 
   const handleDateClick = (date) => {
     setSelectedDate(date);
@@ -120,7 +122,7 @@ function App() {
         <div
           key={day.toString()}
           onClick={() => handleDateClick(day)}
-          className={`p-2 border min-h-24 relative cursor-pointer
+          className={`p-2 border min-h-24 relative cursor-pointer transition duration-150 hover:bg-blue-50
             ${isTodayFlag ? 'bg-blue-100' : ''}
             ${isSelected ? 'ring-2 ring-blue-500' : ''}
             ${isCurrentMonthFlag ? '' : 'text-gray-400'}
@@ -129,9 +131,9 @@ function App() {
           <div className={`text-sm font-medium ${isTodayFlag ? 'text-blue-600 font-bold' : ''}`}>
             {format(day, 'd')}
           </div>
-          <div className="mt-1">
+          <div className="mt-1 space-y-1">
             {dayEvents.slice(0, 3).map(event => (
-              <div key={event.id} className={`text-xs text-white p-1 mb-1 rounded truncate ${event.color}`}>
+              <div key={event.id} className={`text-xs text-white p-1 rounded truncate transition hover:brightness-90 ${event.color}`}>
                 {event.time} {event.title}
               </div>
             ))}
@@ -148,23 +150,35 @@ function App() {
     <div className="min-h-screen bg-gray-100 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 flex flex-wrap items-center justify-between gap-2">
             <h1 className="text-2xl md:text-3xl font-bold text-white">
               {format(currentDate, 'MMMM yyyy')}
             </h1>
-            <div className="flex space-x-3">
-              <button onClick={goToPreviousMonth} className="px-4 py-2 bg-white bg-opacity-30 text-white rounded-md hover:bg-opacity-50 transition font-medium shadow-sm">‹</button>
-              <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 bg-white bg-opacity-30 text-white rounded-md hover:bg-opacity-50 transition font-medium shadow-sm">Today</button>
-              <button onClick={goToNextMonth} className="px-4 py-2 bg-white bg-opacity-30 text-white rounded-md hover:bg-opacity-50 transition font-medium shadow-sm">›</button>
-              <button onClick={handleAddEvent} className="px-4 py-2 bg-yellow-400 text-gray-900 rounded-md hover:bg-yellow-300 transition font-semibold shadow-sm">Add Event</button>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={goToPreviousMonth} className="px-4 py-2 bg-white bg-opacity-30 text-white rounded-md hover:bg-opacity-50 transition font-medium">‹</button>
+              <button onClick={goToToday} className="px-4 py-2 bg-white bg-opacity-30 text-white rounded-md hover:bg-opacity-50 transition font-medium">Today</button>
+              <button onClick={goToNextMonth} className="px-4 py-2 bg-white bg-opacity-30 text-white rounded-md hover:bg-opacity-50 transition font-medium">›</button>
+
+              { }
+              <select
+                className="px-3 py-2 rounded-md bg-white text-gray-800 font-semibold shadow hover:bg-gray-100 transition"
+                onChange={(e) => goToYear(e.target.value)}
+                value={format(currentDate, 'yyyy')}
+              >
+                {Array.from({ length: 21 }, (_, i) => 2015 + i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+
+              <button onClick={handleAddEvent} className="px-4 py-2 bg-yellow-400 text-gray-900 rounded-md hover:bg-yellow-300 transition font-semibold shadow-sm">
+                Add Event
+              </button>
             </div>
           </div>
 
           <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="p-2 text-center text-gray-600 font-medium">
-                {day}
-              </div>
+              <div key={day} className="p-2 text-center text-gray-600 font-medium">{day}</div>
             ))}
           </div>
 
@@ -173,24 +187,21 @@ function App() {
           </div>
         </div>
 
+        { }
         {selectedDate && (
           <div className="mt-6 bg-white rounded-lg shadow-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-800">{format(selectedDate, 'MMMM d, yyyy')}</h2>
-              <span className="text-sm text-gray-500">
-                {selectedEvents.length} event{selectedEvents.length !== 1 ? 's' : ''}
-              </span>
+              <span className="text-sm text-gray-500">{selectedEvents.length} event{selectedEvents.length !== 1 ? 's' : ''}</span>
             </div>
             {selectedEvents.length > 0 ? (
               <div className="space-y-3">
                 {selectedEvents.map(event => (
-                  <div key={event.id} className="p-3 rounded-lg border border-gray-200">
+                  <div key={event.id} className="p-3 rounded-lg border border-gray-200 hover:shadow">
                     <div className="flex justify-between">
                       <h3 className="font-medium">{event.title}</h3>
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {event.time} • {event.duration} minutes
-                    </p>
+                    <p className="text-sm text-gray-600 mt-1">{event.time} • {event.duration} minutes</p>
                   </div>
                 ))}
               </div>
@@ -207,37 +218,11 @@ function App() {
           <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">Add New Event</h2>
             <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="Title"
-                value={newEvent.title}
-                onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
-                className="w-full p-2 border rounded"
-              />
-              <input
-                type="date"
-                value={newEvent.date}
-                onChange={e => setNewEvent({ ...newEvent, date: e.target.value })}
-                className="w-full p-2 border rounded"
-              />
-              <input
-                type="time"
-                value={newEvent.time}
-                onChange={e => setNewEvent({ ...newEvent, time: e.target.value })}
-                className="w-full p-2 border rounded"
-              />
-              <input
-                type="number"
-                placeholder="Duration in minutes"
-                value={newEvent.duration}
-                onChange={e => setNewEvent({ ...newEvent, duration: parseInt(e.target.value) || '' })}
-                className="w-full p-2 border rounded"
-              />
-              <select
-                value={newEvent.color}
-                onChange={e => setNewEvent({ ...newEvent, color: e.target.value })}
-                className="w-full p-2 border rounded"
-              >
+              <input type="text" placeholder="Title" value={newEvent.title} onChange={e => setNewEvent({ ...newEvent, title: e.target.value })} className="w-full p-2 border rounded" />
+              <input type="date" value={newEvent.date} onChange={e => setNewEvent({ ...newEvent, date: e.target.value })} className="w-full p-2 border rounded" />
+              <input type="time" value={newEvent.time} onChange={e => setNewEvent({ ...newEvent, time: e.target.value })} className="w-full p-2 border rounded" />
+              <input type="number" placeholder="Duration in minutes" value={newEvent.duration} onChange={e => setNewEvent({ ...newEvent, duration: parseInt(e.target.value) || '' })} className="w-full p-2 border rounded" />
+              <select value={newEvent.color} onChange={e => setNewEvent({ ...newEvent, color: e.target.value })} className="w-full p-2 border rounded">
                 <option value="bg-blue-500">Blue</option>
                 <option value="bg-green-500">Green</option>
                 <option value="bg-red-500">Red</option>
@@ -258,4 +243,5 @@ function App() {
 }
 
 export default App;
+
 
