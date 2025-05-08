@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, parseISO, isSameMonth } from 'date-fns';
+import {
+  format, addMonths, subMonths, startOfMonth, endOfMonth,
+  eachDayOfInterval, isSameDay, isToday, parseISO, isSameMonth
+} from 'date-fns';
 import './App.css';
 
 const mockEvents = [
@@ -58,153 +61,105 @@ function App() {
   const [events, setEvents] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedEvents, setSelectedEvents] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    title: '',
+    date: '',
+    time: '',
+    duration: '',
+    color: 'bg-blue-500'
+  });
 
   useEffect(() => {
     setEvents(mockEvents);
   }, []);
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(subMonths(currentDate, 1));
-  };
-
-  const goToNextMonth = () => {
-    setCurrentDate(addMonths(currentDate, 1));
-  };
+  const goToPreviousMonth = () => setCurrentDate(subMonths(currentDate, 1));
+  const goToNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
   const handleDateClick = (date) => {
     setSelectedDate(date);
-    
-    const dateEvents = events.filter(event => 
-      isSameDay(parseISO(event.date), date)
-    );
-    
-    setSelectedEvents(dateEvents);
+    setSelectedEvents(events.filter(e => isSameDay(parseISO(e.date), date)));
+  };
+
+  const handleAddEvent = () => {
+    setNewEvent({
+      title: '',
+      date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
+      time: '',
+      duration: '',
+      color: 'bg-blue-500'
+    });
+    setShowModal(true);
+  };
+
+  const saveNewEvent = () => {
+    const id = events.length + 1;
+    setEvents([...events, { ...newEvent, id }]);
+    setShowModal(false);
+
+    if (selectedDate && isSameDay(parseISO(newEvent.date), selectedDate)) {
+      setSelectedEvents([...selectedEvents, { ...newEvent, id }]);
+    }
   };
 
   const renderCalendar = () => {
     const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(monthStart);
-    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-    
-    // const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    
-    const startDay = monthStart.getDay();
-    
-    const emptyDays = Array.from({ length: startDay }, (_, i) => (
+    const days = eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) });
+    const emptyDays = Array.from({ length: monthStart.getDay() }, (_, i) => (
       <div key={`empty-${i}`} className="p-2 border border-gray-200"></div>
     ));
-    
-    const days = daysInMonth.map(day => {
-      const dayEvents = events.filter(event => 
-        isSameDay(parseISO(event.date), day)
-      );
-      
-      const isCurrentDay = isToday(day);
+
+    return [...emptyDays, ...days.map(day => {
+      const dayEvents = events.filter(e => isSameDay(parseISO(e.date), day));
+      const isTodayFlag = isToday(day);
       const isSelected = selectedDate && isSameDay(day, selectedDate);
-      const isCurrentMonth = isSameMonth(day, currentDate);
-      
+      const isCurrentMonthFlag = isSameMonth(day, currentDate);
+
       return (
-        <div 
-          key={day.toString()} 
+        <div
+          key={day.toString()}
           onClick={() => handleDateClick(day)}
-          className={`p-2 border border-gray-200 min-h-24 relative cursor-pointer transition-colors
-            ${isCurrentDay ? 'bg-blue-100' : ''}
+          className={`p-2 border min-h-24 relative cursor-pointer
+            ${isTodayFlag ? 'bg-blue-100' : ''}
             ${isSelected ? 'ring-2 ring-blue-500' : ''}
-            ${isCurrentMonth ? '' : 'text-gray-400'}`}
+            ${isCurrentMonthFlag ? '' : 'text-gray-400'}
+          `}
         >
-          <div className={`text-sm font-medium ${isCurrentDay ? 'text-blue-600 font-bold' : ''}`}>
+          <div className={`text-sm font-medium ${isTodayFlag ? 'text-blue-600 font-bold' : ''}`}>
             {format(day, 'd')}
           </div>
           <div className="mt-1">
             {dayEvents.slice(0, 3).map(event => (
-              <div 
-                key={event.id} 
-                className={`text-xs text-white p-1 mb-1 rounded truncate ${event.color}`}
-                title={`${event.title} at ${event.time}`}
-              >
+              <div key={event.id} className={`text-xs text-white p-1 mb-1 rounded truncate ${event.color}`}>
                 {event.time} {event.title}
               </div>
             ))}
             {dayEvents.length > 3 && (
-              <div className="text-xs text-gray-500">
-                +{dayEvents.length - 3} more
-              </div>
+              <div className="text-xs text-gray-500">+{dayEvents.length - 3} more</div>
             )}
           </div>
         </div>
       );
-    });
-    
-    return [...emptyDays, ...days];
+    })];
   };
-
-  const checkEventConflicts = (events) => {
-    const conflictingEvents = [];
-    
-    for (let i = 0; i < events.length; i++) {
-      for (let j = i + 1; j < events.length; j++) {
-        const event1 = events[i];
-        const event2 = events[j];
-        
-        if (event1.date !== event2.date) continue;
-        
-        const [hours1, minutes1] = event1.time.split(':').map(Number);
-        const [hours2, minutes2] = event2.time.split(':').map(Number);
-        
-        const start1 = hours1 * 60 + minutes1;
-        const end1 = start1 + event1.duration;
-        
-        const start2 = hours2 * 60 + minutes2;
-        const end2 = start2 + event2.duration;
-        
-        if ((start1 < end2 && end1 > start2)) {
-          if (!conflictingEvents.includes(event1.id)) conflictingEvents.push(event1.id);
-          if (!conflictingEvents.includes(event2.id)) conflictingEvents.push(event2.id);
-        }
-      }
-    }
-    
-    return conflictingEvents;
-  };
-
-  const conflictingEvents = selectedEvents.length > 0 ? checkEventConflicts(selectedEvents) : [];
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          { }
           <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 flex items-center justify-between">
             <h1 className="text-2xl md:text-3xl font-bold text-white">
               {format(currentDate, 'MMMM yyyy')}
             </h1>
-            <div className="flex space-x-2">
-              <button 
-                onClick={goToPreviousMonth}
-                className="p-2 bg-white bg-opacity-20 text-white rounded hover:bg-opacity-30 transition"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setCurrentDate(new Date())}
-                className="px-3 py-1 bg-white bg-opacity-20 text-white rounded hover:bg-opacity-30 transition text-sm"
-              >
-                Today
-              </button>
-              <button 
-                onClick={goToNextMonth}
-                className="p-2 bg-white bg-opacity-20 text-white rounded hover:bg-opacity-30 transition"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
+            <div className="flex space-x-3">
+              <button onClick={goToPreviousMonth} className="px-4 py-2 bg-white bg-opacity-30 text-white rounded-md hover:bg-opacity-50 transition font-medium shadow-sm">‹</button>
+              <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 bg-white bg-opacity-30 text-white rounded-md hover:bg-opacity-50 transition font-medium shadow-sm">Today</button>
+              <button onClick={goToNextMonth} className="px-4 py-2 bg-white bg-opacity-30 text-white rounded-md hover:bg-opacity-50 transition font-medium shadow-sm">›</button>
+              <button onClick={handleAddEvent} className="px-4 py-2 bg-yellow-400 text-gray-900 rounded-md hover:bg-yellow-300 transition font-semibold shadow-sm">Add Event</button>
             </div>
           </div>
-          
-          { }
+
           <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
               <div key={day} className="p-2 text-center text-gray-600 font-medium">
@@ -212,49 +167,32 @@ function App() {
               </div>
             ))}
           </div>
-          
-          { }
+
           <div className="grid grid-cols-7">
             {renderCalendar()}
           </div>
         </div>
-        
-        { }
+
         {selectedDate && (
           <div className="mt-6 bg-white rounded-lg shadow-lg p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-800">
-                {format(selectedDate, 'MMMM d, yyyy')}
-              </h2>
+              <h2 className="text-xl font-bold text-gray-800">{format(selectedDate, 'MMMM d, yyyy')}</h2>
               <span className="text-sm text-gray-500">
                 {selectedEvents.length} event{selectedEvents.length !== 1 ? 's' : ''}
               </span>
             </div>
-            
             {selectedEvents.length > 0 ? (
               <div className="space-y-3">
-                {selectedEvents.map(event => {
-                  const hasConflict = conflictingEvents.includes(event.id);
-                  
-                  return (
-                    <div 
-                      key={event.id} 
-                      className={`p-3 rounded-lg border ${hasConflict ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
-                    >
-                      <div className="flex justify-between">
-                        <h3 className="font-medium">{event.title}</h3>
-                        {hasConflict && (
-                          <span className="text-xs text-red-500 font-medium px-2 py-1 bg-red-100 rounded-full">
-                            Time Conflict
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {event.time} • {event.duration} minutes
-                      </p>
+                {selectedEvents.map(event => (
+                  <div key={event.id} className="p-3 rounded-lg border border-gray-200">
+                    <div className="flex justify-between">
+                      <h3 className="font-medium">{event.title}</h3>
                     </div>
-                  );
-                })}
+                    <p className="text-sm text-gray-600 mt-1">
+                      {event.time} • {event.duration} minutes
+                    </p>
+                  </div>
+                ))}
               </div>
             ) : (
               <p className="text-gray-500">No events scheduled for this day.</p>
@@ -262,8 +200,62 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Add New Event</h2>
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="Title"
+                value={newEvent.title}
+                onChange={e => setNewEvent({ ...newEvent, title: e.target.value })}
+                className="w-full p-2 border rounded"
+              />
+              <input
+                type="date"
+                value={newEvent.date}
+                onChange={e => setNewEvent({ ...newEvent, date: e.target.value })}
+                className="w-full p-2 border rounded"
+              />
+              <input
+                type="time"
+                value={newEvent.time}
+                onChange={e => setNewEvent({ ...newEvent, time: e.target.value })}
+                className="w-full p-2 border rounded"
+              />
+              <input
+                type="number"
+                placeholder="Duration in minutes"
+                value={newEvent.duration}
+                onChange={e => setNewEvent({ ...newEvent, duration: parseInt(e.target.value) || '' })}
+                className="w-full p-2 border rounded"
+              />
+              <select
+                value={newEvent.color}
+                onChange={e => setNewEvent({ ...newEvent, color: e.target.value })}
+                className="w-full p-2 border rounded"
+              >
+                <option value="bg-blue-500">Blue</option>
+                <option value="bg-green-500">Green</option>
+                <option value="bg-red-500">Red</option>
+                <option value="bg-yellow-500">Yellow</option>
+                <option value="bg-purple-500">Purple</option>
+                <option value="bg-teal-500">Teal</option>
+              </select>
+              <div className="flex justify-end space-x-2 mt-4">
+                <button onClick={() => setShowModal(false)} className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancel</button>
+                <button onClick={saveNewEvent} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default App;
+
