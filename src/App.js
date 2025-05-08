@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, parseISO, isSameMonth, differenceInMinutes } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, parseISO, isSameMonth } from 'date-fns';
 import './App.css';
 
 const mockEvents = [
@@ -86,7 +86,7 @@ function App() {
     const monthEnd = endOfMonth(monthStart);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
     
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    // const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     
     const startDay = monthStart.getDay();
     
